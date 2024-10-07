@@ -97,3 +97,53 @@ void* mymalloc(size_t size, char* file, int line) {
     fprintf(stderr, "malloc: Unable to allocate %zu bytes (%s:%d)\n", size, file, line);
     return NULL;
 }
+
+
+void myfree(void* ptr, char* file, int line) {
+    if (!initialized) {
+        fprintf(stderr, "free: Heap not initialized (%s:%d)\n", file, line);
+        exit(2);
+    }
+
+    if (ptr == NULL) {
+        fprintf(stderr, "free: Null pointer (%s:%d)\n", file, line);
+        return;
+    }
+
+    // Calculate the start of the chunk from the pointer (pointer is to the payload)
+    Header* chunk_to_free = (Header*)((char*)ptr - HEADER_SIZE);
+
+    // Check if the pointer is within the heap bounds
+    if ((void*)chunk_to_free < (void*)heap.bytes || (void*)chunk_to_free >= (void*)(heap.bytes + MEMLENGTH)) {
+        fprintf(stderr, "free: Pointer out of heap bounds (%s:%d)\n", file, line);
+        exit(2);
+    }
+
+    // Check if the chunk is already free
+    if (chunk_to_free->is_free) {
+        fprintf(stderr, "free: Double free detected (%s:%d)\n", file, line);
+        exit(2);
+    }
+
+    // Mark the chunk as free
+    chunk_to_free->is_free = 1;
+
+    // Coalesce with adjacent free chunks
+    coalesce_chunks();
+}
+
+void coalesce_chunks() {
+    Header* current = (Header*)heap_start;
+
+    while ((void*)current < (void*)(heap.bytes + MEMLENGTH)) {
+        Header* next = (Header*)((char*)current + HEADER_SIZE + current->size);
+
+        // Check if the current and next chunks are both free
+        if (current->is_free && (void*)next < (void*)(heap.bytes + MEMLENGTH) && next->is_free) {
+            // Coalesce the current and next chunks by merging their sizes
+            current->size += HEADER_SIZE + next->size;
+        } else {
+            current = next; // Move to the next chunk
+        }
+    }
+}

@@ -66,6 +66,23 @@ void task5() {
     }
 }
 
+void test_invalid_free_non_malloc() {
+    int x;
+    free(&x);
+}
+
+void test_invalid_free_not_chunk_start() {
+    int *p = (int *)malloc(sizeof(int) * 2);
+    free(p + 1);
+    free(p);
+}
+
+void test_double_free() {
+    int *p = (int *)malloc(sizeof(int) * 100);
+    free(p);
+    free(p);
+}
+
 int main() {
     struct timeval start, end;
     double total_time = 0.0;
@@ -74,7 +91,6 @@ int main() {
     for (int i = 0; i < NUM_RUNS; i++) {
         task1();
     }
-    
     gettimeofday(&end, NULL);
     total_time = time_difference(start, end);
     printf("Task 1: %f ms\n", total_time / NUM_RUNS);
@@ -91,7 +107,6 @@ int main() {
     for (int i = 0; i < NUM_RUNS; i++) {
         task3();
     }
-    
     gettimeofday(&end, NULL);
     total_time = time_difference(start, end);
     printf("Task 3: %f ms\n", total_time / NUM_RUNS);
@@ -100,7 +115,6 @@ int main() {
     for (int i = 0; i < NUM_RUNS; i++) {
         task4();
     }
-    
     gettimeofday(&end, NULL);
     total_time = time_difference(start, end);
     printf("Task 4: %f ms\n", total_time / NUM_RUNS);
@@ -109,10 +123,20 @@ int main() {
     for (int i = 0; i < NUM_RUNS; i++) {
         task5();
     }
-    
     gettimeofday(&end, NULL);
     total_time = time_difference(start, end);
     printf("Task 5: %f ms\n", total_time / NUM_RUNS);
+
+    printf("\nRunning error detection tests:\n");
+
+    printf("Test 1: Freeing non-malloc memory\n");
+    test_invalid_free_non_malloc();
+
+    printf("Test 2: Freeing pointer not at start of chunk\n");
+    test_invalid_free_not_chunk_start();
+
+    printf("Test 3: Double free\n");
+    test_double_free();
 
     return 0;
 }

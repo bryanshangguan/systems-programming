@@ -1,10 +1,12 @@
-#include "mymalloc.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "mymalloc.h"
 
 #define MEMLENGTH 4096
 #define ALIGNMENT 8
 #define HEADER_SIZE (sizeof(Header))
+
+void coalesce_chunks();  // Forward declaration of coalesce_chunks
 
 // Union to enforce alignment
 static union {
@@ -27,18 +29,6 @@ size_t align_size(size_t size) {
     return (size + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
 }
 
-// Function to initialize the heap
-void initialize_heap() {
-    if (!initialized) {
-        heap_start = (void*)heap.bytes;
-        Header* first_chunk = (Header*)heap_start;
-        first_chunk->size = MEMLENGTH - HEADER_SIZE;
-        first_chunk->is_free = 1; // Entire heap is free initially
-        initialized = 1;
-        atexit(leak_detector); // Register leak detector
-    }
-}
-
 // Function to detect memory leaks at program exit
 void leak_detector() {
     Header* current = (Header*)heap_start;
@@ -55,6 +45,18 @@ void leak_detector() {
     
     if (leaked_chunks > 0) {
         fprintf(stderr, "mymalloc: %zu bytes leaked in %d objects.\n", leaked_bytes, leaked_chunks);
+    }
+}
+
+// Function to initialize the heap
+void initialize_heap() {
+    if (!initialized) {
+        heap_start = (void*)heap.bytes;
+        Header* first_chunk = (Header*)heap_start;
+        first_chunk->size = MEMLENGTH - HEADER_SIZE;
+        first_chunk->is_free = 1; // Entire heap is free initially
+        initialized = 1;
+        atexit(leak_detector); // Register leak detector
     }
 }
 

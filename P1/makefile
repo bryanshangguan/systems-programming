@@ -1,16 +1,24 @@
 CC = gcc
 CFLAGS = -Wall -g
-TARGET = memgrind
 
-# List of object files to create
-OBJS = mymalloc.o memgrind.o memtest.o
+# Define two targets: memgrind and memtest
+TARGET1 = memgrind
+TARGET2 = memtest
 
-# Default target to build the program
-all: $(TARGET)
+# List of object files for each target
+OBJS1 = mymalloc.o memgrind.o
+OBJS2 = mymalloc.o memtest.o
 
-# Build the executable
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+# Default target: build both programs
+all: $(TARGET1) $(TARGET2)
+
+# Build the memgrind executable
+$(TARGET1): $(OBJS1)
+	$(CC) $(CFLAGS) -o $(TARGET1) $(OBJS1)
+
+# Build the memtest executable
+$(TARGET2): $(OBJS2)
+	$(CC) $(CFLAGS) -o $(TARGET2) $(OBJS2)
 
 # Compile mymalloc.c to object file
 mymalloc.o: mymalloc.c mymalloc.h
@@ -24,7 +32,6 @@ memtest.o: memtest.c mymalloc.h
 memgrind.o: memgrind.c mymalloc.h
 	$(CC) $(CFLAGS) -c memgrind.c
 
-# Clean up object files and executable
+# Clean up object files and executables
 clean:
-	rm -f *.o $(TARGET)
-	
+	rm -f *.o $(TARGET1) $(TARGET2)

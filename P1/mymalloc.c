@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "mymalloc.h"
 
-#define MEMLENGTH 4096
+#define MEMLENGTH 4096 
 #define ALIGNMENT 8
 #define HEADER_SIZE (sizeof(Header))
 
@@ -14,26 +14,27 @@ static union {
 } heap;
 
 typedef struct Header {
-    size_t size;
-    int is_free;
+    size_t size; //size of the "block"
+    int is_free; //is free
 } Header;
 
 static void* heap_start = NULL;
 static int initialized = 0;
 
+//mallocs only multiples of 8
 size_t align_size(size_t size) {
     return (size + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
 }
 
 void leak_detector() {
-    Header* current = (Header*)heap_start;
+    Header* current = (Header*)heap_start; 
     size_t leaked_bytes = 0;
     int leaked_chunks = 0;
     
     while ((void*)current < (void*)(heap.bytes + MEMLENGTH)) {
-        if (!current->is_free) {
-            leaked_bytes += current->size;
-            leaked_chunks++;
+        if (!current->is_free) { //if not free
+            leaked_bytes += current->size; //then add current size of block to leaked_bytes
+            leaked_chunks++; //and add one to leaked chunks
         }
         current = (Header*)((char*)current + current->size + HEADER_SIZE);
     }
@@ -43,6 +44,7 @@ void leak_detector() {
     }
 }
 
+//making sure it has enough memory for the "block" being saved
 void initialize_heap() {
     if (!initialized) {
         heap_start = (void*)heap.bytes;
@@ -54,48 +56,55 @@ void initialize_heap() {
     }
 }
 
+
 void* mymalloc(size_t size, char* file, int line) {
+    //checks to see if can be initialized
     if (!initialized) {
         initialize_heap();
     }
 
+    //if size of chunk is 0
     if (size == 0) {
         fprintf(stderr, "malloc: Unable to allocate 0 bytes (%s:%d)\n", file, line);
         return NULL;
     }
 
+    //saves size in multiples of 8
     size = align_size(size);
     Header* current = (Header*)heap_start;
 
+    //
     while ((void*)current < (void*)(heap.bytes + MEMLENGTH)) {
         if (current->is_free && current->size >= size) {
-            size_t remaining_space = current->size - size;
-            current->is_free = 0;
-            current->size = size;
+            size_t remaining_space = current->size - size; //remaining space left in memory
+            current->is_free = 0; //space is no longer free
+            current->size = size; //changing size to space that is left
 
-            if (remaining_space >= HEADER_SIZE + ALIGNMENT) {
+            if (remaining_space >= HEADER_SIZE + ALIGNMENT) { //checks if there is enough space for header
                 Header* next_chunk = (Header*)((char*)current + HEADER_SIZE + size);
-                next_chunk->size = remaining_space - HEADER_SIZE;
-                next_chunk->is_free = 1;
+                next_chunk->size = remaining_space - HEADER_SIZE; 
+                next_chunk->is_free = 1; //chunk after is free
             }
             
-            return (void*)((char*)current + HEADER_SIZE);
+            return (void*)((char*)current + HEADER_SIZE); //memory allocated
         }
 
         current = (Header*)((char*)current + current->size + HEADER_SIZE);
     }
 
-    fprintf(stderr, "malloc: Unable to allocate %zu bytes (%s:%d)\n", size, file, line);
-    return NULL;
+    fprintf(stderr, "malloc: Unable to allocate %zu bytes (%s:%d)\n", size, file, line); //error line
+    return NULL; //memory not allocated
 }
 
 
 void myfree(void* ptr, char* file, int line) {
+    //no memory has been saved
     if (!initialized) {
         fprintf(stderr, "free: Heap not initialized (%s:%d)\n", file, line);
         exit(2);
     }
 
+    //not pointing to any valid memory
     if (ptr == NULL) {
         fprintf(stderr, "free: Null pointer (%s:%d)\n", file, line);
         return;
@@ -104,20 +113,24 @@ void myfree(void* ptr, char* file, int line) {
     Header* current = (Header*)heap_start;
     int found = 0;
 
+
     while ((void*)current < (void*)(heap.bytes + MEMLENGTH)) {
         void* payload_start = (void*)((char*)current + HEADER_SIZE);
         if (payload_start == ptr) {
             found = 1;
             break;
         }
+        //changes size to the current free space + space being freed
         current = (Header*)((char*)current + current->size + HEADER_SIZE);
     }
 
+    //checks if the pointer is invalid
     if (!found) {
         fprintf(stderr, "free: Inappropriate pointer (%s:%d)\n", file, line);
         exit(2);
     }
 
+    //if memory is already "freed"
     if (current->is_free) {
         fprintf(stderr, "free: Double free detected (%s:%d)\n", file, line);
         exit(2);
@@ -128,6 +141,7 @@ void myfree(void* ptr, char* file, int line) {
     coalesce_chunks();
 }
 
+//merging free chunks
 void coalesce_chunks() {
     Header* current = (Header*)heap_start;
 

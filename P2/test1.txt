@@ -1,0 +1,6 @@
+hi-hi hello 
+data
+testing
+text.txt 
+TEST 
+TEXT.txt
